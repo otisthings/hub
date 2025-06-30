@@ -19,9 +19,9 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-console.log('?? API Base URL:', API_BASE_URL);
-console.log('?? Environment:', import.meta.env.MODE);
-console.log('?? Current Origin:', window.location.origin);
+console.log('🔗 API Base URL:', API_BASE_URL);
+console.log('🌍 Environment:', import.meta.env.MODE);
+console.log('🌐 Current Origin:', window.location.origin);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -35,7 +35,7 @@ const api = axios.create({
 // CRITICAL: Enhanced request interceptor for debugging cross-domain issues
 api.interceptors.request.use(
   (config) => {
-    console.log('?? API Request:', {
+    console.log('📤 API Request:', {
       method: config.method?.toUpperCase(),
       url: config.url,
       baseURL: config.baseURL,
@@ -47,7 +47,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('? Request Error:', error);
+    console.error('❌ Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -55,7 +55,7 @@ api.interceptors.request.use(
 // CRITICAL: Enhanced response interceptor for debugging authentication issues
 api.interceptors.response.use(
   (response) => {
-    console.log('? API Response:', {
+    console.log('✅ API Response:', {
       status: response.status,
       url: response.config.url,
       headers: response.headers,
@@ -65,7 +65,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('? Response Error:', {
+    console.error('❌ Response Error:', {
       status: error.response?.status,
       url: error.config?.url,
       message: error.message,
@@ -80,8 +80,8 @@ api.interceptors.response.use(
     
     // CRITICAL: Don't auto-redirect on 401 - let components handle it
     if (error.response?.status === 401) {
-      console.warn('?? Authentication failed - 401 Unauthorized');
-      console.warn('?? Current cookies:', document.cookie);
+      console.warn('⚠️ Authentication failed - 401 Unauthorized');
+      console.warn('🍪 Current cookies:', document.cookie);
     }
     
     return Promise.reject(error);
@@ -179,6 +179,35 @@ export const timeclockAPI = {
 
 export const dashboardAPI = {
   getStats: () => api.get('/api/dashboard/stats').then(res => res.data),
+};
+
+export const garageAPI = {
+  // Dashboard
+  getDashboard: () => api.get('/api/garage/dashboard').then(res => res.data),
+  
+  // Tiers
+  getTiers: () => api.get('/api/garage/tiers').then(res => res.data),
+  
+  // Code redemption
+  redeemCode: (code: string) => api.post('/api/garage/redeem', { code }).then(res => res.data),
+  
+  // Vehicles
+  submitVehicle: (data: any) => api.post('/api/garage/vehicles', data).then(res => res.data),
+  getUserVehicles: () => api.get('/api/garage/my-vehicles').then(res => res.data),
+  
+  // Admin endpoints
+  getConfig: () => api.get('/api/garage/config').then(res => res.data),
+  updateConfig: (data: any) => api.put('/api/garage/config', data).then(res => res.data),
+  
+  getRolePermissions: () => api.get('/api/garage/permissions').then(res => res.data),
+  updateRolePermissions: (role_id: string, permissions: any) => 
+    api.put('/api/garage/permissions', { role_id, permissions }).then(res => res.data),
+  
+  createTier: (data: any) => api.post('/api/garage/tiers', data).then(res => res.data),
+  updateTier: (id: string, data: any) => api.put(`/api/garage/tiers/${id}`, data).then(res => res.data),
+  deleteTier: (id: string) => api.delete(`/api/garage/tiers/${id}`).then(res => res.data),
+  
+  generateCodes: (data: any) => api.post('/api/garage/generate-codes', data).then(res => res.data),
 };
 
 // Export the main api instance for other uses
