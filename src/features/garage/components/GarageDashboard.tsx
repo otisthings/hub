@@ -8,7 +8,9 @@ import {
   Settings,
   Users,
   Key,
-  Award
+  Award,
+  Trash2,
+  Edit2
 } from 'lucide-react';
 import { garageAPI } from '../services/garageAPI';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
@@ -61,8 +63,27 @@ export const GarageDashboard: React.FC = () => {
             can_edit_vehicles: true
           });
         } else if (user?.roles) {
-          // This would be implemented to check against garage_role_permissions
-          // For now, we'll assume no permissions for non-admin users
+          // Check garage permissions based on user roles
+          try {
+            const rolePermissions = await garageAPI.getRolePermissions();
+            const userRoleIds = user.roles.map(role => role.id);
+            
+            // Check if user has any garage permissions
+            const userPermissions = rolePermissions.filter(perm => 
+              userRoleIds.includes(perm.role_id)
+            );
+            
+            if (userPermissions.length > 0) {
+              setPermissions({
+                can_view_manager: userPermissions.some(p => p.can_view_manager),
+                can_generate_codes: userPermissions.some(p => p.can_generate_codes),
+                can_delete_vehicles: userPermissions.some(p => p.can_delete_vehicles),
+                can_edit_vehicles: userPermissions.some(p => p.can_edit_vehicles)
+              });
+            }
+          } catch (error) {
+            console.error('Failed to fetch garage permissions:', error);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch garage dashboard:', error);
@@ -250,14 +271,15 @@ export const GarageDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Admin Actions */}
-      {(permissions.can_view_manager || permissions.can_generate_codes) && (
+      {/* Admin Actions - Permission-Based Visibility */}
+      {(permissions.can_view_manager || permissions.can_generate_codes || permissions.can_delete_vehicles || permissions.can_edit_vehicles) && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             Admin Actions
           </h2>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Contribution Manager - VIEW MANAGER permission */}
             {permissions.can_view_manager && (
               <Link
                 to="/garage/admin/contributions"
@@ -273,6 +295,7 @@ export const GarageDashboard: React.FC = () => {
               </Link>
             )}
 
+            {/* Code Generator - GENERATE CODES permission */}
             {permissions.can_generate_codes && (
               <Link
                 to="/garage/admin/generate"
@@ -284,6 +307,29 @@ export const GarageDashboard: React.FC = () => {
                 <div className="ml-3">
                   <h3 className="font-medium text-gray-900 dark:text-white">Generate Codes</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Create subscription codes</p>
+                </div>
+              </Link>
+            )}
+
+            {/* Vehicle Manager - DELETE or EDIT permissions */}
+            {(permissions.can_delete_vehicles || permissions.can_edit_vehicles) && (
+              <Link
+                to="/garage/admin/vehicles"
+                className="flex items-center p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-green-300 dark:hover:border-green-600 transition-colors duration-200 group"
+              >
+                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg group-hover:bg-green-200 dark:group-hover:bg-green-900/30 transition-colors">
+                  <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="font-medium text-gray-900 dark:text-white">Vehicle Manager</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {permissions.can_delete_vehicles && permissions.can_edit_vehicles 
+                      ? 'Edit & delete vehicles'
+                      : permissions.can_edit_vehicles 
+                        ? 'Edit vehicles'
+                        : 'Delete vehicles'
+                    }
+                  </p>
                 </div>
               </Link>
             )}

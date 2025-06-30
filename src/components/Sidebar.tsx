@@ -23,8 +23,7 @@ import {
   Car
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { categoriesAPI, departmentsAPI } from '../services/api';
-import { garageAPI } from '../features/garage/services/garageAPI';
+import { categoriesAPI, departmentsAPI, garageAPI } from '../services/api';
 import type { LucideIcon } from 'lucide-react';
 import { getFeatureFlags } from '../services/features';
 
@@ -153,8 +152,30 @@ export const Sidebar: React.FC = () => {
         }
 
         // Check garage permissions or active subscription
-        const dashboard = await garageAPI.getDashboard();
-        setHasGarageAccess(dashboard.hasAccess || dashboard.subscriptions.length > 0);
+        try {
+          const dashboard = await garageAPI.getDashboard();
+          setHasGarageAccess(dashboard.hasAccess || dashboard.subscriptions.length > 0);
+        } catch (error) {
+          // If dashboard fails, check permissions
+          try {
+            const rolePermissions = await garageAPI.getRolePermissions();
+            const userRoleIds = user.roles?.map(role => role.id) || [];
+            
+            // Check if user has any garage permissions
+            const userPermissions = rolePermissions.filter(perm => 
+              userRoleIds.includes(perm.role_id)
+            );
+            
+            const hasAnyPermission = userPermissions.some(p => 
+              p.can_view_manager || p.can_generate_codes || p.can_delete_vehicles || p.can_edit_vehicles
+            );
+            
+            setHasGarageAccess(hasAnyPermission);
+          } catch (permError) {
+            console.error('Failed to check garage permissions:', permError);
+            setHasGarageAccess(false);
+          }
+        }
       } catch (error) {
         console.error('Failed to check garage access:', error);
         setHasGarageAccess(false);
