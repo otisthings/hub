@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { garageAPI } from '../services/garageAPI';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface Subscription {
   id: number;
@@ -27,8 +28,22 @@ interface DashboardData {
   hasAccess: boolean;
 }
 
+interface GaragePermissions {
+  can_view_manager: boolean;
+  can_generate_codes: boolean;
+  can_delete_vehicles: boolean;
+  can_edit_vehicles: boolean;
+}
+
 export const GarageDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [permissions, setPermissions] = useState<GaragePermissions>({
+    can_view_manager: false,
+    can_generate_codes: false,
+    can_delete_vehicles: false,
+    can_edit_vehicles: false
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,6 +51,19 @@ export const GarageDashboard: React.FC = () => {
       try {
         const dashboardData = await garageAPI.getDashboard();
         setData(dashboardData);
+        
+        // Check user permissions
+        if (user?.is_admin) {
+          setPermissions({
+            can_view_manager: true,
+            can_generate_codes: true,
+            can_delete_vehicles: true,
+            can_edit_vehicles: true
+          });
+        } else if (user?.roles) {
+          // This would be implemented to check against garage_role_permissions
+          // For now, we'll assume no permissions for non-admin users
+        }
       } catch (error) {
         console.error('Failed to fetch garage dashboard:', error);
       } finally {
@@ -44,7 +72,7 @@ export const GarageDashboard: React.FC = () => {
     };
 
     fetchDashboard();
-  }, []);
+  }, [user]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -221,6 +249,47 @@ export const GarageDashboard: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Admin Actions */}
+      {(permissions.can_view_manager || permissions.can_generate_codes) && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Admin Actions
+          </h2>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {permissions.can_view_manager && (
+              <Link
+                to="/garage/admin/contributions"
+                className="flex items-center p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-red-300 dark:hover:border-red-600 transition-colors duration-200 group"
+              >
+                <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg group-hover:bg-red-200 dark:group-hover:bg-red-900/30 transition-colors">
+                  <Settings className="h-5 w-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="font-medium text-gray-900 dark:text-white">Contribution Manager</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Configure garage settings</p>
+                </div>
+              </Link>
+            )}
+
+            {permissions.can_generate_codes && (
+              <Link
+                to="/garage/admin/generate"
+                className="flex items-center p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors duration-200 group"
+              >
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/30 transition-colors">
+                  <Key className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="font-medium text-gray-900 dark:text-white">Generate Codes</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Create subscription codes</p>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Active Subscriptions */}
       {data.subscriptions.length > 0 && (
