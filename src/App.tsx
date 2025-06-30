@@ -19,6 +19,7 @@ import { ManagementPage } from './pages/ManagementPage';
 import { DepartmentsPage } from './pages/DepartmentsPage';
 import { OrganizationsPage } from './pages/OrganizationsPage';
 import { RosterViewPage } from './pages/RosterViewPage';
+import { GarageRouter } from './features/garage/pages/GarageRouter';
 import { PrivateRoute } from './components/PrivateRoute';
 
 export const App: React.FC = () => {
@@ -66,6 +67,7 @@ export const App: React.FC = () => {
               <Route path="departments" element={<DepartmentsPage />} />
               <Route path="organizations" element={<OrganizationsPage />} />
               <Route path="departments/:id/roster" element={<RosterViewPage />} />
+              <Route path="garage/*" element={<GarageRouter />} />
               <Route path="admin" element={<AdminPage />} />
             </Route>
           </Routes>

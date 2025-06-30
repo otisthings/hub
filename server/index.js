@@ -20,6 +20,9 @@ import apiRoutes from './routes/api.js';
 import profileRoutes from './routes/profile.js';
 import timeclockRoutes from './routes/timeclock.js';
 import departmentsRoutes from './routes/departments.js';
+import garageRoutes from './modules/garage/routes/garageRoutes.js';
+import garageApiRoutes from './modules/garage/routes/garageApiRoutes.js';
+import { GarageModels } from './modules/garage/models/GarageModels.js';
 import { featureFlags, requireFeature } from './config/features.js';
 
 // Load environment variables
@@ -96,6 +99,10 @@ async function startServer() {
     // Initialize main database
     await initializeDatabase();
     
+    // Initialize garage tables
+    await GarageModels.createTables();
+    console.log('✅ Garage database tables initialized');
+    
     // Initialize MySQL session store
     const MySQLStoreSession = MySQLStore(session);
     const sessionStore = new MySQLStoreSession({}, getDatabase());
@@ -134,11 +141,11 @@ async function startServer() {
       try {
         await initializeStaffDatabase();
       } catch (error) {
-        console.error('? Staff database connection failed - player record features will be disabled:', error);
+        console.error('⚠ Staff database connection failed - player record features will be disabled:', error);
         featureFlags.enablePlayerRecord = false;
       }
     } else {
-      console.log('?? Staff database connection skipped - player record features are disabled');
+      console.log('ℹ️ Staff database connection skipped - player record features are disabled');
     }
     
     // Initialize timeclock database (optional)
@@ -146,13 +153,13 @@ async function startServer() {
       try {
         await initializeTimeclockDatabase();
       } catch (error) {
-        console.error('? Timeclock database connection failed - timeclock related features will be disabled:', error);
+        console.error('⚠ Timeclock database connection failed - timeclock related features will be disabled:', error);
         featureFlags.enableDepartments = false;
         featureFlags.enableOrganizations = false;
         featureFlags.enableTimeclock = false;
       }
     } else {
-      console.log('?? Timeclock database connection skipped - timeclock related features are disabled');
+      console.log('ℹ️ Timeclock database connection skipped - timeclock related features are disabled');
     }
     
     // Configure passport
@@ -178,6 +185,8 @@ async function startServer() {
     app.use('/api/profile', profileRoutes);
     app.use('/api/timeclock', requireFeature('enableTimeclock'), timeclockRoutes);
     app.use('/api/departments', requireFeature('enableDepartments'), departmentsRoutes);
+    app.use('/api/garage', garageRoutes);
+    app.use('/api', garageApiRoutes);
     
     // Health check endpoint with enhanced session info
     app.get('/health', (req, res) => {
@@ -222,7 +231,7 @@ async function startServer() {
     
     // Global error handling middleware
     app.use((err, req, res, next) => {
-      console.error('? Server Error:', err);
+      console.error('🚨 Server Error:', err);
       
       // Don't leak error details in production
       const errorMessage = NODE_ENV === 'production' 
@@ -241,14 +250,14 @@ async function startServer() {
     });
     
     const server = app.listen(PORT, () => {
-      console.log(`?? Server running on port ${PORT}`);
-      console.log(`?? Environment: ${NODE_ENV}`);
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${NODE_ENV}`);
       if (NODE_ENV === 'development') {
-        console.log(`?? Auth URL: http://localhost:${PORT}/auth/discord`);
+        console.log(`🔗 Auth URL: http://localhost:${PORT}/auth/discord`);
       } else {
-        console.log(`?? Production API: ${process.env.VITE_API_URL}`);
-        console.log(`?? Production Frontend: ${process.env.VITE_APP_URL}`);
-        console.log(`?? Auth URL: ${process.env.VITE_API_URL}/auth/discord`);
+        console.log(`🔗 Production API: ${process.env.VITE_API_URL}`);
+        console.log(`🔗 Production Frontend: ${process.env.VITE_APP_URL}`);
+        console.log(`🔗 Auth URL: ${process.env.VITE_API_URL}/auth/discord`);
       }
     });
 

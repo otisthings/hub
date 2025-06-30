@@ -19,10 +19,12 @@ import {
   Users,
   ShoppingBag,
   Building,
-  Building2
+  Building2,
+  Car
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { categoriesAPI, departmentsAPI } from '../services/api';
+import { garageAPI } from '../features/garage/services/garageAPI';
 import type { LucideIcon } from 'lucide-react';
 import { getFeatureFlags } from '../services/features';
 
@@ -46,6 +48,8 @@ export const Sidebar: React.FC = () => {
   const [hasDepartmentAccess, setHasDepartmentAccess] = useState(false);
   const [hasOrganizationAccess, setHasOrganizationAccess] = useState(false);
   const [departmentLoading, setDepartmentLoading] = useState(true);
+  const [hasGarageAccess, setHasGarageAccess] = useState(false);
+  const [garageLoading, setGarageLoading] = useState(true);
   const [features, setFeatures] = useState({
     enableDepartments: true,
     enableOrganizations: true,
@@ -132,6 +136,36 @@ export const Sidebar: React.FC = () => {
     checkDepartmentAccess();
   }, [user, features]);
 
+  // Check if user has access to garage
+  useEffect(() => {
+    const checkGarageAccess = async () => {
+      if (!user) {
+        setGarageLoading(false);
+        return;
+      }
+
+      try {
+        // Admin always has access
+        if (user.is_admin) {
+          setHasGarageAccess(true);
+          setGarageLoading(false);
+          return;
+        }
+
+        // Check garage permissions or active subscription
+        const dashboard = await garageAPI.getDashboard();
+        setHasGarageAccess(dashboard.hasAccess || dashboard.subscriptions.length > 0);
+      } catch (error) {
+        console.error('Failed to check garage access:', error);
+        setHasGarageAccess(false);
+      } finally {
+        setGarageLoading(false);
+      }
+    };
+
+    checkGarageAccess();
+  }, [user]);
+
   // Fetch custom branding - optimized to prevent flicker
   useEffect(() => {
     const fetchBranding = async () => {
@@ -179,6 +213,11 @@ export const Sidebar: React.FC = () => {
     icon: ShoppingBag,
     external: true 
   });
+
+  // Add Garage section if user has access
+  if (!garageLoading && hasGarageAccess) {
+    navigation.push({ name: 'Garage', href: '/garage', icon: Car });
+  }
 
   // Add visual separator before Applications
   const separatorIndex = navigation.length;
